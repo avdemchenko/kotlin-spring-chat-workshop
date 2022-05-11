@@ -1,6 +1,8 @@
 package com.example.kotlin.chat
 
+import com.example.kotlin.chat.extensions.prepareForTesting
 import com.example.kotlin.chat.repository.ContentType
+import com.example.kotlin.chat.repository.ContentType.MARKDOWN
 import com.example.kotlin.chat.repository.Message
 import com.example.kotlin.chat.repository.MessageRepository
 import com.example.kotlin.chat.service.MessageVM
@@ -17,7 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDO
 import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.boot.test.web.client.postForEntity
 import org.springframework.core.ParameterizedTypeReference
-import org.springframework.http.HttpMethod
+import org.springframework.http.HttpMethod.GET
 import org.springframework.http.RequestEntity
 import java.net.URI
 import java.net.URL
@@ -48,14 +50,14 @@ class PersistentMessageServiceTest @Autowired constructor(
                         ),
                         Message(
                                 "**testMessage2**",
-                                ContentType.PLAIN,
+                                MARKDOWN,
                                 secondBeforeNow,
                                 "test1",
                                 "http://test.com"
                         ),
                         Message(
                                 "`testMessage3`",
-                                ContentType.PLAIN,
+                                MARKDOWN,
                                 now,
                                 "test2",
                                 "http://test.com"
@@ -75,7 +77,7 @@ class PersistentMessageServiceTest @Autowired constructor(
     fun `test that messages API returns latest messages`(withLastMessageId: Boolean) {
         val messages: List<MessageVM>? = client.exchange(
                 RequestEntity<Any>(
-                        HttpMethod.GET,
+                        GET,
                         URI("/api/v1/messages?lastMessageId=${if (withLastMessageId) lastMessageId else ""}")
                 ),
                 object : ParameterizedTypeReference<List<MessageVM>>() {}).body
@@ -92,15 +94,15 @@ class PersistentMessageServiceTest @Autowired constructor(
                     )
         }
 
-        assertThat(messages?.map { with(it) { copy(id = null, sent = sent.truncatedTo(MILLIS)) } })
+        assertThat(messages?.map { it.prepareForTesting() })
                 .containsSubsequence(
                         MessageVM(
-                                "**testMessage2**",
+                                "<body><p><strong>testMessage2</strong></p></body>",
                                 UserVM("test1", URL("http://test.com")),
                                 now.minusSeconds(1).truncatedTo(MILLIS)
                         ),
                         MessageVM(
-                                "`testMessage3`",
+                                "<body><p><code>testMessage3</code></p></body>",
                                 UserVM("test2", URL("http://test.com")),
                                 now.truncatedTo(MILLIS)
                         )
@@ -121,12 +123,12 @@ class PersistentMessageServiceTest @Autowired constructor(
 
         messageRepository.findAll()
                 .first { it.content.contains("HelloWorld") }
-                .run {
-                    assertThat(this.copy(id = null, sent = sent.truncatedTo(MILLIS)))
+                .apply {
+                    assertThat(this.prepareForTesting())
                             .isEqualTo(
                                     Message(
                                             "`HelloWorld`",
-                                            ContentType.PLAIN,
+                                            MARKDOWN,
                                             now.plusSeconds(1).truncatedTo(MILLIS),
                                             "test",
                                             "http://test.com"

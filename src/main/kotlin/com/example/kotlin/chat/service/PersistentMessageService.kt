@@ -1,5 +1,7 @@
 package com.example.kotlin.chat.service
 
+import asDomainObject
+import asViewModel
 import com.example.kotlin.chat.repository.ContentType
 import com.example.kotlin.chat.repository.ContentType.PLAIN
 import com.example.kotlin.chat.repository.Message
@@ -13,26 +15,10 @@ import java.net.URL
 class PersistentMessageService(val messageRepository: MessageRepository) : MessageService {
 
     override fun latest(): List<MessageVM> =
-            messageRepository.findLatest()
-                    .map {
-                        with(it) {
-                            MessageVM(content, UserVM(username, URL(userAvatarImageLink)), sent, id)
-                        }
-                    }
+            messageRepository.findLatest().map { it.asViewModel() }
 
     override fun after(lastMessageId: String): List<MessageVM> =
-            messageRepository.findLatest(lastMessageId)
-                    .map {
-                        with(it) {
-                            MessageVM(content, UserVM(username, URL(userAvatarImageLink)), sent, id)
-                        }
-                    }
+            messageRepository.findLatest(lastMessageId).map { it.asViewModel() }
 
-    override fun post(message: MessageVM) {
-        messageRepository.save(
-                with(message) {
-                    Message(content, PLAIN, sent, user.name, user.avatarImageLink.toString())
-                }
-        )
-    }
+    override fun post(message: MessageVM) { messageRepository.save(message.asDomainObject()) }
 }
