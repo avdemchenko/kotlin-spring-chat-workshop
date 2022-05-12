@@ -1,24 +1,31 @@
 package com.example.kotlin.chat.service
 
 import asDomainObject
-import asViewModel
-import com.example.kotlin.chat.repository.ContentType
-import com.example.kotlin.chat.repository.ContentType.PLAIN
-import com.example.kotlin.chat.repository.Message
+import asRendered
 import com.example.kotlin.chat.repository.MessageRepository
-import org.springframework.context.annotation.Primary
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.collect
+import mapToViewModel
 import org.springframework.stereotype.Service
-import java.net.URL
 
 @Service
-@Primary
 class PersistentMessageService(val messageRepository: MessageRepository) : MessageService {
 
-    override suspend fun latest(): List<MessageVM> =
-            messageRepository.findLatest().map { it.asViewModel() }
+    val sender: MutableSharedFlow<MessageVM> = MutableSharedFlow()
 
-    override suspend fun after(lastMessageId: String): List<MessageVM> =
-            messageRepository.findLatest(lastMessageId).map { it.asViewModel() }
+    override fun latest(): Flow<MessageVM> = messageRepository.findLatest().mapToViewModel()
 
-    override suspend fun post(message: MessageVM) { messageRepository.save(message.asDomainObject()) }
+    override fun after(messageId: String): Flow<MessageVM> = messageRepository.findLatest(messageId).mapToViewModel()
+
+    override fun stream(): Flow<MessageVM> = sender
+
+    override suspend fun post(messages: Flow<MessageVM>) =
+            messages
+                    .onEach { sender.emit(it.asRendered()) }
+                    .map { it.asDomainObject() }
+                    .let { messageRepository.saveAll(it) }
+                    .collect()
 }
