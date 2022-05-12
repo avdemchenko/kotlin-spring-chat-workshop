@@ -14,11 +14,11 @@ import java.net.URL
 @Primary
 class PersistentMessageService(val messageRepository: MessageRepository) : MessageService {
 
-    override fun latest(): List<MessageVM> =
+    override suspend fun latest(): List<MessageVM> =
             messageRepository.findLatest().map { it.asViewModel() }
 
-    override fun after(lastMessageId: String): List<MessageVM> =
+    override suspend fun after(lastMessageId: String): List<MessageVM> =
             messageRepository.findLatest(lastMessageId).map { it.asViewModel() }
 
-    override fun post(message: MessageVM) { messageRepository.save(message.asDomainObject()) }
+    override suspend fun post(message: MessageVM) { messageRepository.save(message.asDomainObject()) }
 }
