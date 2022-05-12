@@ -1,5 +1,5 @@
 # Kotlin Spring chat workshop
-This is a project that demonstrates the usage and interaction of Spring, Kotlin and Rsoket technologies.
+This is a project that demonstrates the usage and interaction of Spring, Kotlin and Rsocket technologies.
 
 References:
 
